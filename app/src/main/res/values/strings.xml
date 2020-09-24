@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">QrCodeReader</string>
+    <string name="read">read</string>
+</resources>
