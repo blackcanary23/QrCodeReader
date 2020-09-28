@@ -35,8 +35,8 @@ import javax.net.ssl.X509TrustManager;
 
 public class CertValidateFragment extends Fragment {
 
-    private ArrayList<CertChainRepository> chainList = new ArrayList<>();
-    private ArrayList<String> certificateChain = new ArrayList<>();
+    private ArrayList<CertChainRepository> chainList;
+    private ArrayList<String> certificateChain;
     private Certificate[] certificates = new Certificate[0];
     private X509Certificate intermediate = null;
     private CertValidateAdapter cvAdapter;
@@ -81,11 +81,12 @@ public class CertValidateFragment extends Fragment {
             @Override
             public void run() {
 
-                chainList.clear();
+                chainList = new ArrayList<>();
 
                 for (String url : urlList) {
 
-                    certificateChain.clear();
+                    certificateChain = new ArrayList<>();
+                    validity = true;
 
                     if (url.contains("http://"))
                         url = url.replace("http://", "https://");
@@ -148,7 +149,7 @@ public class CertValidateFragment extends Fragment {
                                                 .indexOf("CN")));
                         parsePrincipal();
                         chainList.add(new CertChainRepository(certificateChain, validity));
-                        break;
+                        continue;
                     }
                     catch (ArrayIndexOutOfBoundsException |
                             ClassCastException |
@@ -158,7 +159,7 @@ public class CertValidateFragment extends Fragment {
                         validity = false;
                         certificateChain.add("Unvalid Certificate " + hostName);
                         chainList.add(new CertChainRepository(certificateChain, validity));
-                        break;
+                        continue;
                     }
                     finally {
 
@@ -167,7 +168,6 @@ public class CertValidateFragment extends Fragment {
                     }
 
                     getRootCertificate();
-
                     chainList.add(new CertChainRepository(certificateChain, validity));
                 }
 

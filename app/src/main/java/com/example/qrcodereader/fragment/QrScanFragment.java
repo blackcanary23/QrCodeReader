@@ -127,6 +127,8 @@ public class QrScanFragment extends Fragment {
 
                 try {
 
+                    //String data = "http://site2.ru/cgi/users, http://site1.ru/, https://yandex.ru/, https://www.dubai.com/";
+                    //mListener.onReadButtonClicked(data);
                     mListener.onReadButtonClicked(barcodes.valueAt(0).rawValue);
                 }
                 catch (ArrayIndexOutOfBoundsException ex) {
