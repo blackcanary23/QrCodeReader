@@ -60,12 +60,6 @@ public class UrlListFragment extends Fragment {
         Objects.requireNonNull(getActivity()).setRequestedOrientation(ActivityInfo
                 .SCREEN_ORIENTATION_UNSPECIFIED);
 
-        /*Bundle bundle = getArguments();
-        assert bundle != null;
-        String rawData = (String) bundle.getSerializable("rawData");
-
-        parseRawData(rawData);*/
-
         if (urlList.size() != 0) {
 
             RecyclerView recyclerView = view.findViewById(R.id.qs_list);
@@ -89,7 +83,8 @@ public class UrlListFragment extends Fragment {
 
     private void parseRawData(String rawData) {
 
-        String regex = "\\(?\\b(https://|www[.]|http://)[-A-Za-z0-9+&@#/%?=~_()|!:,.;]*[-A-Za-z0-9+&@#/%=~_()|]";
+        //ToDo: www.dubai.com (without https:// or http://)
+        String regex = "\\(?\\b(https://|http://)[-A-Za-z0-9+&@#/%?=~_()|!:,.;]*[-A-Za-z0-9+&@#/%=~_()|]";
         urlList.clear();
 
         Pattern p = Pattern.compile(regex);

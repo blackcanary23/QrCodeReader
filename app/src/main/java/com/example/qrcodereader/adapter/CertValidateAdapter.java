@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -23,7 +24,8 @@ public class CertValidateAdapter extends RecyclerView.Adapter<CertValidateAdapte
 
     @NonNull
     @Override
-    public CertValidateAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public CertValidateAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent,
+                                                             int viewType) {
 
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.cert_validate_item, parent, false);
@@ -35,6 +37,11 @@ public class CertValidateAdapter extends RecyclerView.Adapter<CertValidateAdapte
     public void onBindViewHolder(@NonNull CertValidateAdapter.ViewHolder holder, int position) {
 
         holder.cert.setText(chainList.get(position).getCertChains().toString());
+
+        if(chainList.get(position).getValidity())
+            holder.validity.setImageResource(R.drawable.checkmark);
+        else
+            holder.validity.setImageResource(R.drawable.clearmark);
     }
 
     @Override
@@ -47,12 +54,14 @@ public class CertValidateAdapter extends RecyclerView.Adapter<CertValidateAdapte
     static class ViewHolder extends RecyclerView.ViewHolder {
 
         final TextView cert;
+        final ImageView validity;
 
         ViewHolder(@NonNull View itemView) {
 
             super(itemView);
 
             cert = itemView.findViewById(R.id.cert);
+            validity = itemView.findViewById(R.id.validity);
         }
     }
 }

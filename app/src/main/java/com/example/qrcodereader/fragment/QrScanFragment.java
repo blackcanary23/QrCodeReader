@@ -121,11 +121,12 @@ public class QrScanFragment extends Fragment {
 
                 final SparseArray<Barcode> barcodes = detections.getDetectedItems();
 
+                //ToDo: Had no possibility to check whether my app would work correctly with
+                // multiple url QR codes, as did not find any free service/app for such QR codes
+                // generation
+
                 try {
 
-                    //parseRawData(barcodes.valueAt(0).rawValue);
-                    //parseRawData("https://yandex.ru, https://www.dubai.com/, http://site1.ru, http://site2.ru/cgi/users, https://one.site3.org?");
-                    //barcodeInfo.setText(links.toString());
                     mListener.onReadButtonClicked(barcodes.valueAt(0).rawValue);
                 }
                 catch (ArrayIndexOutOfBoundsException ex) {
@@ -156,6 +157,8 @@ public class QrScanFragment extends Fragment {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
+
+        //ToDo: Fix case if user choice is "Reject and Ask no more"
         if (requestCode == PERMISSION_REQUEST_CODE
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 

@@ -12,9 +12,7 @@ import com.example.qrcodereader.R;
 import com.example.qrcodereader.adapter.CertValidateAdapter;
 import com.example.qrcodereader.model.CertChainRepository;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.security.InvalidKeyException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -25,6 +23,7 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.net.ssl.HttpsURLConnection;
@@ -42,6 +41,7 @@ public class CertValidateFragment extends Fragment {
     private X509Certificate intermediate = null;
     private CertValidateAdapter cvAdapter;
     private boolean validity = true;
+    private TrustManagerFactory tmFactory;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -87,34 +87,42 @@ public class CertValidateFragment extends Fragment {
 
                     certificateChain.clear();
 
+                    if (url.contains("http://"))
+                        url = url.replace("http://", "https://");
+
                     HttpsURLConnection connection = null;
+                    String hostName = null;
 
                     try {
 
-                        //url = new URL("https://site2.ru/cgi/users");
+                        hostName = new URL(url).getHost();
 
                         connection = (HttpsURLConnection) new URL(url).openConnection();
                         connection.connect();
+
                         certificates = connection.getServerCertificates();
-                        //System.out.println(certificates.length + "LENGTH" + certificates[0]);
+
+                        //ToDo: Fix if Server returns ROOT
                         intermediate = (X509Certificate) certificates[certificates.length - 1];
 
                         certificateChain.add(((X509Certificate) certificates[0])
                                 .getSubjectX500Principal().getName());
 
+                        //ToDo: Verify HostName, Expiration Date
                         ((X509Certificate) certificates[0]).checkValidity();
+
+                        tmFactory = TrustManagerFactory
+                                .getInstance(TrustManagerFactory
+                                        .getDefaultAlgorithm());
+                        tmFactory.init((KeyStore) null);
+
 
                         for (int i = 0; i < certificates.length - 1; i++) {
 
                             certificates[i].verify(certificates[i + 1].getPublicKey());
-                            //certificateChain.add(certificates[i]);
-                            //certificateChain.add(certificates[i++]);
-                            //System.out.println("Hello" + ((X509Certificate) certificates[i]).getSubjectX500Principal().getName() + " " + ((X509Certificate) certificates[i + 1]).getSubjectX500Principal().getName());
-                            //certificateChain.add(((X509Certificate) certificates[i]).getSubjectX500Principal().getName());
                             certificateChain
                                     .add(((X509Certificate) certificates[i + 1])
                                     .getSubjectX500Principal().getName());
-                            //break;
                         }
                     }
                     catch (CertificateException |
@@ -122,47 +130,45 @@ public class CertValidateFragment extends Fragment {
                             NoSuchAlgorithmException |
                             NoSuchProviderException |
                             SignatureException |
-                            IOException |
-                            ArrayIndexOutOfBoundsException ex) {
+                            KeyStoreException ex) {
 
                         ex.printStackTrace();
                         validity = false;
                     }
+                    //ToDo: Get Certificate Chain (http://site1.ru/)
+                    catch (SSLPeerUnverifiedException ex) {
 
+                        ex.printStackTrace();
+                        validity = false;
+                        certificateChain
+                                .add(Objects
+                                        .requireNonNull(ex
+                                                .getMessage())
+                                        .substring(ex.getMessage()
+                                                .indexOf("CN")));
+                        parsePrincipal();
+                        chainList.add(new CertChainRepository(certificateChain, validity));
+                        break;
+                    }
+                    catch (ArrayIndexOutOfBoundsException |
+                            ClassCastException |
+                            IOException ex) {
+
+                        ex.printStackTrace();
+                        validity = false;
+                        certificateChain.add("Unvalid Certificate " + hostName);
+                        chainList.add(new CertChainRepository(certificateChain, validity));
+                        break;
+                    }
                     finally {
 
                         if (connection != null)
                             connection.disconnect();
                     }
 
-                    //
-                    /*for (int i = 0; i < certificates.length - 1; i++) {
+                    getRootCertificate();
 
-                        try {
-
-                            assert intermediate != null;
-                            certificates[i].verify(certificates[i + 1].getPublicKey());
-                            //certificateChain.add(certificates[i]);
-                            //certificateChain.add(certificates[i++]);
-                            //System.out.println("Hello" + ((X509Certificate) certificates[i]).getSubjectX500Principal().getName() + " " + ((X509Certificate) certificates[i + 1]).getSubjectX500Principal().getName());
-                            //certificateChain.add(((X509Certificate) certificates[i]).getSubjectX500Principal().getName());
-                            certificateChain.add(((X509Certificate) certificates[i + 1]).getSubjectX500Principal().getName());
-                            break;
-                        }
-                        catch (CertificateException | InvalidKeyException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException ex) {
-
-                            ex.printStackTrace();
-                        }
-                    }*/
-                    //
-
-
-                    //System.out.println("VALIDITY");
-
-                    if (validity) {
-                        getRootCertificate();
-                        chainList.add(new CertChainRepository(certificateChain));
-                    }
+                    chainList.add(new CertChainRepository(certificateChain, validity));
                 }
 
                     if(getActivity() == null)
@@ -181,64 +187,41 @@ public class CertValidateFragment extends Fragment {
 
     private void getRootCertificate() {
 
-        TrustManagerFactory tmFactory;
         X509TrustManager x509Tm;
 
-        try {
-
-            tmFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            tmFactory.init((KeyStore) null);
-
-            TrustManager[] trustManagers = tmFactory.getTrustManagers();
-            x509Tm = (X509TrustManager) trustManagers[0];
-            X509Certificate[] issuers = x509Tm.getAcceptedIssuers();
-
-            for (X509Certificate issuer : issuers) {
-
-                intermediate.verify(issuer.getPublicKey());
-                //System.out.println(issuer.getSubjectX500Principal().getName() + "ISSUER");
-                certificateChain.add(issuer.getSubjectX500Principal().getName());
-                //System.out.println(certificateChain.size() + "SIZE");
-                break;
-            }
-        }
-        catch (NoSuchAlgorithmException |
-                KeyStoreException |
-                CertificateException |
-                InvalidKeyException |
-                SignatureException |
-                NoSuchProviderException ex) {
-
-            ex.printStackTrace();
-        }
-
-        /*TrustManager[] trustManagers = tmFactory.getTrustManagers();
+        TrustManager[] trustManagers = tmFactory.getTrustManagers();
         x509Tm = (X509TrustManager) trustManagers[0];
         X509Certificate[] issuers = x509Tm.getAcceptedIssuers();
 
         for (X509Certificate issuer : issuers) {
 
             try {
-
-                assert intermediate != null;
                 intermediate.verify(issuer.getPublicKey());
-                //System.out.println(issuer.getSubjectX500Principal().getName() + "ISSUER");
                 certificateChain.add(issuer.getSubjectX500Principal().getName());
-                //System.out.println(certificateChain.size() + "SIZE");
                 break;
             }
-            catch (CertificateException | InvalidKeyException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException ex) {
+            catch (NoSuchAlgorithmException |
+                    CertificateException |
+                    InvalidKeyException |
+                    SignatureException |
+                    NoSuchProviderException  ex) {
 
                 ex.printStackTrace();
             }
-        }*/
 
+            //ToDo: Sometimes https://www.dubai.com/ throws IllegalBlockSizeException
+            catch (Exception ex) {
+
+                //javax.crypto.IllegalBlockSizeException:
+                // error:04000073:RSA routines:OPENSSL_internal:DATA_TOO_LARGE_FOR_MODULUS
+            }
+        }
         parsePrincipal();
     }
 
     private void parsePrincipal() {
 
-        String regex = "(?:^|,\\s?)(?:CN=(?<val>\"(?:[^\"]|\"\")+\"|[^,]+))"; //
+        String regex = "(?:^|,\\s?)(?:CN=(?<val>\"(?:[^\"]|\"\")+\"|[^,]+))";
 
         Pattern p = Pattern.compile(regex);
 
@@ -251,7 +234,6 @@ public class CertValidateFragment extends Fragment {
                 certificateChain.set(i, m.group(1));
             }
         }
-        //System.out.println(certificateChain.size() + "SIZE");
     }
 
     @Override
